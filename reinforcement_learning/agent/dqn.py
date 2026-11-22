@@ -67,7 +67,7 @@ def average_gate_fidelity(U, U_target):
     M = U_target.dag() * U
     trM = M.tr()
     F = (abs(trM)**2 + d) / (d * (d + 1))
-    # clip numérique pour éviter F > 1
+    # numerical clip to avoid F > 1
     return float(np.clip(np.real(F), 0.0, 1.0))
 
 
@@ -280,17 +280,17 @@ def run_oct_grape_two_qutrit_cz(
     return sys, eps1, eps2, F_final, F_check, fid_hist
 
 
-# Bandit-style residual env DISCRET (2 qutrits, pour DQN)
+# DISCRETE bandit-style residual env (2 qutrits, for DQN)
 # =========================
 
 class CZResidualBanditEnv(gym.Env):
     """
-    One-step environment for 2 qutrits, version DISCRETE pour DQN :
+    One-step environment for 2 qutrits, DISCRETE version for DQN:
 
     - Observation: normalized nominal OCT pulses (fixed)
       [eps1_base, eps2_base] concatenated.
-    - Action: entier k ∈ {0, ..., n_actions-1}
-      qui correspond à un facteur de scale appliqué aux pulses.
+    - Action: integer k ∈ {0, ..., n_actions-1}
+      mapped to a scale factor applied to the pulses.
     - Reward: F(U_scaled) - F_baseline on noisy device.
     """
 
@@ -368,11 +368,11 @@ class CZResidualBanditEnv(gym.Env):
             dtype=np.float32
         )
 
-        # --- Action space DISCRET pour DQN ---
+        # --- DISCRETE action space for DQN ---
         self.n_actions = n_actions
         self.max_scale_delta = max_scale_delta
         indices = np.linspace(-1.0, 1.0, n_actions)
-        # ex: pour n_actions=5 → [1-2δ, 1-δ, 1, 1+δ, 1+2δ]
+        # e.g. for n_actions=5 → [1-2δ, 1-δ, 1, 1+δ, 1+2δ]
         self.scales = 1.0 + self.max_scale_delta * indices
 
         self.action_space = spaces.Discrete(self.n_actions)
@@ -381,7 +381,7 @@ class CZResidualBanditEnv(gym.Env):
         return self.base_obs.copy(), {}
 
     def step(self, action):
-        # action est un entier 0..n_actions-1
+        # the action is an integer 0..n_actions-1
         if isinstance(action, np.ndarray):
             action = int(action[0])
         action = int(action)
@@ -422,15 +422,15 @@ class CZResidualBanditEnv(gym.Env):
 
 class CheckpointCallback(BaseCallback):
     """
-    Callback amélioré qui :
-    - Enregistre les fidélités dans un CSV
-    - Sauvegarde périodiquement le modèle
-    - Sauvegarde les métadonnées (nombre d'épisodes, meilleur score, etc.)
+    Improved callback that:
+    - Logs the fidelities to a CSV file
+    - Saves the model periodically
+    - Saves the metadata (number of episodes, best score, etc.)
     """
 
     def __init__(
         self,
-        save_freq=1000,  # Sauvegarde tous les N timesteps
+        save_freq=1000,  # Save every N timesteps
         save_path="./checkpoints/",
         name_prefix="dqn_rl_model",
         verbose=0,
@@ -440,52 +440,52 @@ class CheckpointCallback(BaseCallback):
         self.save_path = Path(save_path)
         self.name_prefix = name_prefix
         
-        # Créer le dossier de sauvegarde
+        # Create the save folder
         self.save_path.mkdir(parents=True, exist_ok=True)
         
-        # Chemins des fichiers
+        # File paths
         self.csv_path = self.save_path / "training_log.csv"
         self.metadata_path = self.save_path / "metadata.json"
         
-        # Données en mémoire
+        # In-memory data
         self.fidelities = []
         self.episode_indices = []
         self.timesteps_done = 0
         self.episodes_done = 0
         self.best_fidelity = -np.inf
         
-        # Charger les données existantes si elles existent
+        # Load the existing data if there is any
         self._load_existing_data()
 
     def _load_existing_data(self):
-        """Charge les données existantes depuis les fichiers"""
-        # Charger les métadonnées
+        """Loads the existing data from the files"""
+        # Load the metadata
         if self.metadata_path.exists():
             with open(self.metadata_path, 'r') as f:
                 metadata = json.load(f)
                 self.episodes_done = metadata.get('episodes_done', 0)
                 self.timesteps_done = metadata.get('timesteps_done', 0)
                 self.best_fidelity = metadata.get('best_fidelity', -np.inf)
-            print(f"\n[Checkpoint] Reprise à partir de l'épisode {self.episodes_done}")
-            print(f"[Checkpoint] Timesteps déjà effectués: {self.timesteps_done}")
-            print(f"[Checkpoint] Meilleure fidélité: {self.best_fidelity:.6f}\n")
+            print(f"\n[Checkpoint] Resuming from episode {self.episodes_done}")
+            print(f"[Checkpoint] Timesteps already done: {self.timesteps_done}")
+            print(f"[Checkpoint] Best fidelity: {self.best_fidelity:.6f}\n")
         
-        # Charger l'historique CSV
+        # Load the CSV history
         if self.csv_path.exists():
             with open(self.csv_path, 'r') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
                     self.fidelities.append(float(row['fidelity']))
                     self.episode_indices.append(int(row['episode']))
-            print(f"[Checkpoint] {len(self.fidelities)} épisodes chargés depuis le CSV\n")
+            print(f"[Checkpoint] {len(self.fidelities)} episodes loaded from the CSV\n")
         else:
-            # Créer le fichier CSV avec en-têtes
+            # Create the CSV file with its headers
             with open(self.csv_path, 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(['episode', 'fidelity', 'timestep'])
 
     def _save_metadata(self):
-        """Sauvegarde les métadonnées dans un fichier JSON"""
+        """Saves the metadata to a JSON file"""
         metadata = {
             'episodes_done': self.episodes_done,
             'timesteps_done': self.timesteps_done,
@@ -496,10 +496,10 @@ class CheckpointCallback(BaseCallback):
             json.dump(metadata, f, indent=2)
 
     def _on_step(self) -> bool:
-        # Mise à jour du compteur de timesteps
+        # Update the timestep counter
         self.timesteps_done = self.num_timesteps
         
-        # Enregistrement des épisodes terminés
+        # Record the finished episodes
         infos = self.locals.get("infos", [])
         dones = self.locals.get("dones", [])
         
@@ -512,11 +512,11 @@ class CheckpointCallback(BaseCallback):
                     self.fidelities.append(F)
                     self.episode_indices.append(self.episodes_done)
                     
-                    # Mise à jour de la meilleure fidélité
+                    # Update the best fidelity
                     if F > self.best_fidelity:
                         self.best_fidelity = F
                     
-                    # Append au CSV
+                    # Append to the CSV
                     with open(self.csv_path, 'a', newline='') as f:
                         writer = csv.writer(f)
                         writer.writerow([self.episodes_done, F, self.timesteps_done])
@@ -524,22 +524,22 @@ class CheckpointCallback(BaseCallback):
                     if self.verbose > 0:
                         print(f"Episode {self.episodes_done}: F={F:.6f}, Best={self.best_fidelity:.6f}")
         
-        # Sauvegarde périodique
+        # Periodic save
         if self.n_calls % self.save_freq == 0:
             model_path = self.save_path / f"{self.name_prefix}_step_{self.num_timesteps}"
             self.model.save(model_path)
             self._save_metadata()
             if self.verbose > 0:
-                print(f"\n[Checkpoint] Modèle sauvegardé à {model_path}.zip\n")
+                print(f"\n[Checkpoint] Model saved to {model_path}.zip\n")
         
         return True
 
     def _on_training_end(self) -> None:
-        """Sauvegarde finale à la fin de l'entraînement"""
+        """Final save at the end of training"""
         model_path = self.save_path / f"{self.name_prefix}_final"
         self.model.save(model_path)
         self._save_metadata()
-        print(f"\n[Checkpoint] Modèle final sauvegardé à {model_path}.zip\n")
+        print(f"\n[Checkpoint] Final model saved to {model_path}.zip\n")
 
 
 # =========================
@@ -549,7 +549,7 @@ class CheckpointCallback(BaseCallback):
 
 class TrainingManager:
     """
-    Gère la reprise et la continuation de l'entraînement
+    Handles resuming and continuing the training
     """
     
     def __init__(self, checkpoint_dir="./checkpoints/"):
@@ -557,33 +557,33 @@ class TrainingManager:
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
     
     def find_latest_checkpoint(self, prefix="dqn_rl_model"):
-        """Trouve le checkpoint le plus récent"""
+        """Finds the most recent checkpoint"""
         checkpoints = list(self.checkpoint_dir.glob(f"{prefix}_step_*.zip"))
         if not checkpoints:
             return None
         
-        # Trier par numéro de step
+        # Sort by step number
         checkpoints.sort(key=lambda x: int(x.stem.split('_')[-1]))
         return checkpoints[-1]
     
     def load_or_create_model(self, env, model_class=DQN, **model_kwargs):
         """
-        Charge le dernier checkpoint s'il existe, sinon crée un nouveau modèle
+        Loads the latest checkpoint if there is one, otherwise creates a new model
         """
         latest_checkpoint = self.find_latest_checkpoint()
         
         if latest_checkpoint is not None:
             print(f"\n{'='*60}")
-            print(f"[REPRISE] Checkpoint trouvé: {latest_checkpoint}")
+            print(f"[RESUME] Checkpoint found: {latest_checkpoint}")
             print(f"{'='*60}\n")
             model = model_class.load(latest_checkpoint, env=env)
-            return model, True  # True = reprise
+            return model, True  # True = resumed
         else:
             print(f"\n{'='*60}")
-            print(f"[NOUVEAU] Aucun checkpoint trouvé, création d'un nouveau modèle")
+            print(f"[NEW] No checkpoint found, creating a new model")
             print(f"{'='*60}\n")
             model = model_class(env=env, **model_kwargs)
-            return model, False  # False = nouveau
+            return model, False  # False = new
 
 
 # Main
@@ -630,20 +630,20 @@ def main():
         eps2_base=eps2_oct,
         sys_nominal=sys,
         max_amp=max_amp,
-        max_scale_delta=0.05,  # ±5% autour des pulses OCT
+        max_scale_delta=0.05,  # ±5% around the OCT pulses
         noise_std_w=noise_std_w,
         noise_std_g=noise_std_g,
         seed=123,
-        n_actions=5,            # nombre d'actions discrètes
+        n_actions=5,            # number of discrete actions
     )
 
     print(f"Baseline OCT fidelity on noisy device: {env.F_baseline:.6f}")
 
-    # ------------ 3) DQN training avec reprise automatique --------------
+    # ------------ 3) DQN training with automatic resume --------------
     checkpoint_dir = "./checkpoints_dqn/"
     manager = TrainingManager(checkpoint_dir=checkpoint_dir)
     
-    # Callback avec sauvegarde
+    # Callback with saving
     checkpoint_callback = CheckpointCallback(
         save_freq=1000,
         save_path=checkpoint_dir,
@@ -651,7 +651,7 @@ def main():
         verbose=1,
     )
     
-    # Charger ou créer le modèle
+    # Load or create the model
     model, is_resumed = manager.load_or_create_model(
         env,
         model_class=DQN,
@@ -669,19 +669,19 @@ def main():
         tensorboard_log=None,
     )
     
-    # Entraînement (ou continuation)
+    # Training (or continuation)
     total_timesteps = 50_000
     
     if is_resumed:
-        # Calculer les timesteps restants
+        # Compute the remaining timesteps
         remaining_timesteps = total_timesteps - checkpoint_callback.timesteps_done
         if remaining_timesteps > 0:
-            print(f"\n[Continuation] Entraînement pour {remaining_timesteps} timesteps supplémentaires")
+            print(f"\n[Continuation] Training for {remaining_timesteps} more timesteps")
             model.learn(total_timesteps=remaining_timesteps, callback=checkpoint_callback, reset_num_timesteps=False)
         else:
-            print(f"\n[Info] Entraînement déjà complété ({checkpoint_callback.timesteps_done}/{total_timesteps} timesteps)")
+            print(f"\n[Info] Training already complete ({checkpoint_callback.timesteps_done}/{total_timesteps} timesteps)")
     else:
-        print(f"\n[Nouveau] Entraînement pour {total_timesteps} timesteps")
+        print(f"\n[New] Training for {total_timesteps} timesteps")
         model.learn(total_timesteps=total_timesteps, callback=checkpoint_callback)
 
     # ------------ 4) RL learning curve (scatter only) -------------

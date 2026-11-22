@@ -28,7 +28,7 @@ from qutip import (
     tensor,
 )
 
-# CHANGEMENT CLÉ : Importation de TD3 à la place de SAC
+# KEY CHANGE: import TD3 instead of SAC
 # from stable_baselines3 import SAC
 from stable_baselines3 import TD3 
 from stable_baselines3.common.noise import NormalActionNoise
@@ -65,7 +65,7 @@ def average_gate_fidelity(U, U_target):
     M = U_target.dag() * U
     trM = M.tr()
     F = (abs(trM)**2 + d) / (d * (d + 1))
-    # clip pour éviter F > 1 à cause des flottants
+    # clip to avoid F > 1 because of floating-point errors
     return float(np.clip(np.real(F), 0.0, 1.0))
 
 
@@ -391,9 +391,9 @@ class CZResidualBanditEnv(gym.Env):
 
 class FidelityLoggingCallback(BaseCallback):
     """
-    Callback qui enregistre les fidélités par épisode :
-    - en mémoire (self.fidelities, self.episode_indices)
-    - ET dans un fichier CSV (save_path)
+    Callback that records the fidelity of each episode:
+    - in memory (self.fidelities, self.episode_indices)
+    - AND in a CSV file (save_path)
     """
     def __init__(self, verbose=0, save_path="fidelity_log.csv"):
         super().__init__(verbose)
@@ -401,7 +401,7 @@ class FidelityLoggingCallback(BaseCallback):
         self.fidelities = []
         self.episode_indices = []
 
-        # Création du fichier CSV avec en-têtes
+        # Create the CSV file with its headers
         with open(self.save_path, "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["episode", "fidelity"])
@@ -418,7 +418,7 @@ class FidelityLoggingCallback(BaseCallback):
                     self.fidelities.append(F)
                     self.episode_indices.append(ep)
 
-                    # append au CSV
+                    # append to the CSV
                     with open(self.save_path, "a", newline="") as f:
                         writer = csv.writer(f)
                         writer.writerow([ep, F])
@@ -454,7 +454,7 @@ def main():
         f" process fidelity = {F_proc_nom:.6f},"
         f" avg gate fidelity = {F_avg_nom:.6f}"
     )
-    # ... code de tracé des impulsions OCT et de l'historique de fidélité ...
+    # ... plotting code for the OCT pulses and the fidelity history ...
 
     # -------- 2) Bandit env: fixed noisy device --------
     noise_std_w = 0.001
@@ -476,7 +476,7 @@ def main():
     # ------------ 3) TD3 training --------------
     n_actions = env.action_space.shape[0]
     
-    # Bruit d'exploration pour TD3 (NormalActionNoise)
+    # Exploration noise for TD3 (NormalActionNoise)
     action_noise = NormalActionNoise(
         mean=np.zeros(n_actions),
         sigma=0.3 * np.ones(n_actions),
@@ -485,15 +485,15 @@ def main():
     policy_kwargs = dict(net_arch=[256, 256, 256])
     fidelity_cb = FidelityLoggingCallback(save_path="fidelity_log.csv")
 
-    model = TD3( # CHANGEMENT CLÉ : Utilisation de TD3
+    model = TD3( # KEY CHANGE: use TD3
         "MlpPolicy",
         env,
-        action_noise=action_noise, # TD3 utilise explicitement le bruit d'exploration
+        action_noise=action_noise, # TD3 uses the exploration noise explicitly
         learning_rate=3e-4,
         batch_size=256,
         gamma=0.99,
         tau=0.005,
-        policy_delay=2, # Hyperparamètre clé de TD3 (mise à jour de la politique tous les 2 pas)
+        policy_delay=2, # Key TD3 hyperparameter (policy updated every 2 steps)
         verbose=1,
         tensorboard_log=None,
         policy_kwargs=policy_kwargs,
@@ -501,9 +501,9 @@ def main():
 
     total_timesteps = 50_000
     model.learn(total_timesteps=total_timesteps, callback=fidelity_cb)
-    model.save("two_qutrit_cz_td3_bandit_noise") # Nom du modèle mis à jour
+    model.save("two_qutrit_cz_td3_bandit_noise") # Updated model name
 
-    # ... reste du code pour le tracé des courbes et l'évaluation finale ...
+    # ... rest of the code for the plots and the final evaluation ...
 
     # ------------ 4) RL learning curve (scatter only) -------------
     raw_fids = np.array(fidelity_cb.fidelities)
@@ -534,7 +534,7 @@ def main():
     print(f"\nBaseline OCT fidelity on noisy device: {env.F_baseline:.6f}")
     print(f"Final RL pulse fidelity on same noisy device: {F_rl:.6f}")
     
-    # ... code de tracé Fidelity vs temps et Pulses OCT vs RL ...
+    # ... plotting code for fidelity vs time and OCT vs RL pulses ...
 
 if __name__ == "__main__":
     main()

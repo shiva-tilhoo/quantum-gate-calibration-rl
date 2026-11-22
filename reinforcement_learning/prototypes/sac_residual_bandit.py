@@ -463,8 +463,8 @@ def main():
         plt.show()
 
     # -------- 2) Bandit env: fixed noisy device --------
-    noise_std_w = 0.0     # <--- PAS DE BRUIT SUR LES FREQUENCES
-    noise_std_g = 0.0     # <--- PAS DE BRUIT SUR LE COUPLAGE
+    noise_std_w = 0.0     # <--- NO NOISE ON THE FREQUENCIES
+    noise_std_g = 0.0     # <--- NO NOISE ON THE COUPLING
 
     env = CZResidualBanditEnv(
         eps1_base=eps1_oct,
